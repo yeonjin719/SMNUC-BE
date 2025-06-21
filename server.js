@@ -144,6 +144,39 @@ app.get('/api/buildings/:building', (req, res) => {
     res.json(sortedResult);
 });
 
+app.get('/api/nowUsing/:room', (req, res) => {
+    const classroom = req.params.room; // ✅ 수정: req.params.building → room
+    const now = new Date();
+
+    const currentDay = now.toLocaleDateString('ko-KR', { weekday: 'short' });
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const classes = data[classroom];
+
+    if (!classes) {
+        return res
+            .status(404)
+            .json({ error: `No data for classroom: ${classroom}` });
+    }
+
+    const isInUse = classes.some((cls) => {
+        if (cls.day !== currentDay || !cls.time) return false;
+
+        const [startStr, endStr] = cls.time.split('~').map((t) => t.trim());
+        if (!startStr || !endStr) return false;
+
+        const [startHour, startMin] = startStr.split(':').map(Number);
+        const [endHour, endMin] = endStr.split(':').map(Number);
+
+        const startMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+
+        return startMinutes <= currentMinutes && currentMinutes <= endMinutes;
+    });
+
+    res.json({ room: classroom, inUse: isInUse });
+});
+
 // 서버 시작
 app.listen(PORT, () => {
     console.log(`✅ Server listening on http://localhost:${PORT}`);
