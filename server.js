@@ -86,12 +86,26 @@ app.get('/api/rooms/:room', (req, res) => {
     res.json(sorted);
 });
 
-// 쿼리로 강의실 prefix 조회
 app.get('/api/classrooms', (req, res) => {
-    const { room } = req.query;
+    const { room, day } = req.query;
 
+    // 영어 요일 → 한글 요일 매핑
+    const dayMap = {
+        Mon: '월',
+        Tue: '화',
+        Wed: '수',
+        Thu: '목',
+        Fri: '금',
+        Sat: '토',
+        Sun: '일',
+    };
+
+    // 한글로 변환된 요일 (day가 없거나 ALL이면 null)
+    const targetDay = !day || day === 'ALL' ? null : dayMap[day] || null;
+
+    // room 파라미터가 없으면 전체 정렬된 데이터 반환
     if (!room || typeof room !== 'string' || room.trim() === '') {
-        const sorted = sortClassrooms(data); // 알파벳 + 숫자 정렬 포함된 함수
+        const sorted = sortClassrooms(data);
         return res.json(sorted);
     }
 
@@ -103,7 +117,12 @@ app.get('/api/classrooms', (req, res) => {
 
     const result = {};
     matchedRooms.forEach((roomKey) => {
-        result[roomKey] = data[roomKey];
+        const originalClasses = data[roomKey];
+        const filteredClasses = targetDay
+            ? originalClasses.filter((cls) => cls.day === targetDay)
+            : originalClasses;
+
+        result[roomKey] = sortSchedules(filteredClasses);
     });
 
     const sortedResult = sortClassrooms(result);
